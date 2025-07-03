@@ -1,6 +1,4 @@
-flask
-flask-cors
+Flask
 pandas
-scikit-learn
-sentence-transformers
-torch
+fuzzywuzzy
+python-Levenshtein

@@ -1,37 +1,38 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
 import pandas as pd
+from fuzzywuzzy import fuzz
 
 app = Flask(__name__)
-CORS(app)
 
-# Load data
+# Load the CSV file
 df = pd.read_csv("augmented_chatbot_dataset.csv")
 questions = df['Question'].astype(str).tolist()
 answers = df['Answer'].astype(str).tolist()
 
-# Load model & encode once
-model = SentenceTransformer('paraphrase-MiniLM-L3-v2')
+# Match user input with best question
+def get_response(user_input):
+    best_score = 0
+    best_idx = -1
+    for idx, question in enumerate(questions):
+        score = fuzz.ratio(user_input.lower(), question.lower())
+        if score > best_score:
+            best_score = score
+            best_idx = idx
 
-question_embeddings = model.encode(questions)
+    if best_score < 60:
+        return "I'm not sure I understood that. Can you rephrase?"
+    return answers[best_idx]
 
-@app.route('/chat', methods=['POST'])
+# API route
+@app.route("/chat", methods=["POST"])
 def chat():
-    user_input = request.json.get("message", "")
-    user_embedding = model.encode([user_input])
+    data = request.get_json()
+    user_input = data.get("message", "")
+    response = get_response(user_input)
+    return jsonify({"response": response})
 
-    similarity = cosine_similarity(user_embedding, question_embeddings)
-    idx = similarity.argmax()
-    score = similarity[0][idx]
-
-    print(f"Input: {user_input}, Best match score: {score:.2f}, Index: {idx}")
-
-    if score < 0.4:
-        return jsonify({"response": "Hmm, I didn’t understand that. Can you rephrase?"})
-
-    return jsonify({"response": answers[idx]})
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000)
+# For Railway: use PORT env variable
+if __name__ == "__main__":
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
