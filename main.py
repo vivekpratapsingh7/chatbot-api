@@ -13,7 +13,8 @@ questions = df['Question'].astype(str).tolist()
 answers = df['Answer'].astype(str).tolist()
 
 # Load model & encode once
-model = SentenceTransformer('all-MiniLM-L6-v2')
+model = SentenceTransformer('paraphrase-MiniLM-L3-v2')
+
 question_embeddings = model.encode(questions)
 
 @app.route('/chat', methods=['POST'])
